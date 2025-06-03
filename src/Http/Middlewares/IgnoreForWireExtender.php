@@ -19,24 +19,24 @@ trait IgnoreForWireExtender
     public function handle($request, Closure $next)
     {
         // We only care about requests from an embedded component
-        if (! $this->isLivewireUpdateRequest($request)) {
-            return parent::handle($request, $next);
-        }
+        if ($this->isLivewireUpdateRequest($request) || $this->isWireExtenderRequest($request)) {
+            // Loop through all components that are part of the update
+            foreach ($request->json('components', []) as $component) {
+                $snapshot = json_decode($component['snapshot'] ?? '', true);
 
-        // Loop through all components that are part of the update
-        foreach ($request->json('components', []) as $component) {
-            $snapshot = json_decode($component['snapshot'], true);
+                // Component comes either from snapshot or embed request initialization
+                $component = $snapshot['memo']['name'] ?? $component['name'];
 
-            // Component comes either from snapshot or embed request initialization
-            $component = $snapshot['memo']['name'] ?? $component['name'];
-
-            // All components must be embeddable otherwise we will apply the existing middleware
-            if (WireExtender::isEmbeddable($component) === false) {
-                return parent::handle($request, $next);
+                // All components must be embeddable otherwise we will apply the existing middleware
+                if (WireExtender::isEmbeddable($component) === false) {
+                    return parent::handle($request, $next);
+                }
             }
+
+            return $next($request);
         }
 
-        return $next($request);
+        return parent::handle($request, $next);
     }
 
     private function isLivewireUpdateRequest(Request $request): bool
@@ -49,6 +49,6 @@ trait IgnoreForWireExtender
 
     private function isWireExtenderRequest(Request $request): bool
     {
-        return $request->method() === 'POST' && config('wire-extender.embed_route') === $request->getRequestUri();
+        return $request->method() === 'POST' && '/'.config('wire-extender.embed_route') === $request->getRequestUri();
     }
 }
