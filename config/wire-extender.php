@@ -8,4 +8,6 @@ return [
     'middlewares' => [
         // 'web',
     ],
+
+    'embed_route' => env("WIRE_EXTENDER_EMBED_ROUTE", 'livewire/embed')
 ];

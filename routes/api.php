@@ -1,5 +1,6 @@
 <?php
 
+use Illuminate\Support\Facades\Route;
 use WireElements\WireExtender\Http\Controllers\EmbedController;
 
-Route::any('livewire/embed', EmbedController::class);
+Route::any(config('wire-extender.embed_route'), EmbedController::class);

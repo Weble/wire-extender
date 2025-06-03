@@ -4,7 +4,6 @@ namespace WireElements\WireExtender\Http\Middlewares;
 
 use Closure;
 use Illuminate\Http\Request;
-use Illuminate\Session\TokenMismatchException;
 use Livewire\LivewireManager;
 use WireElements\WireExtender\WireExtender;
 
@@ -27,7 +26,9 @@ trait IgnoreForWireExtender
         // Loop through all components that are part of the update
         foreach ($request->json('components', []) as $component) {
             $snapshot = json_decode($component['snapshot'], true);
-            $component = $snapshot['memo']['name'] ?? false;
+
+            // Component comes either from snapshot or embed request initialization
+            $component = $snapshot['memo']['name'] ?? $component['name'];
 
             // All components must be embeddable otherwise we will apply the existing middleware
             if (WireExtender::isEmbeddable($component) === false) {
@@ -38,11 +39,16 @@ trait IgnoreForWireExtender
         return $next($request);
     }
 
-    private function isLivewireUpdateRequest($request): bool
+    private function isLivewireUpdateRequest(Request $request): bool
     {
         return $request->method() === 'POST' &&
             app(LivewireManager::class)->getUpdateUri() === $request->getRequestUri() &&
             $request->hasHeader('X-Wire-Extender') &&
             $request->hasHeader('X-Livewire');
+    }
+
+    private function isWireExtenderRequest(Request $request): bool
+    {
+        return $request->method() === 'POST' && config('wire-extender.embed_route') === $request->getRequestUri();
     }
 }
